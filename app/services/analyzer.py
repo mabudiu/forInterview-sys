@@ -23,105 +23,35 @@ USER_PREPARATION = """## 职位JD
 ## 个人简历
 {resume_text}
 
-## 分析任务
+严格输出以下JSON，不要任何其他内容：
 
-请深度分析JD要求和简历内容，输出以下结构的JSON：
+{{"overall_score":0-100整数,
+"score_breakdown":{{"技能匹配":0,"经验匹配":0,"项目匹配":0,"潜力空间":0}},
 
-{{
-  "overall_score": 整数(0-100)，客观评估简历与JD的整体匹配度，
-  "score_breakdown": {{
-    "技能匹配": 整数(0-100),
-    "经验匹配": 整数(0-100),
-    "项目匹配": 整数(0-100),
-    "潜力空间": 整数(0-100)
-  }},
+"matched_items":[
+  {{"aspect":"匹配维度","jd_requirement":"JD要求","resume_evidence":"简历证据","analysis":"为何匹配"}},
+  {{"aspect":"匹配维度2","jd_requirement":"JD要求2","resume_evidence":"简历证据2","analysis":"为何匹配2"}},
+  {{"aspect":"匹配维度3","jd_requirement":"JD要求3","resume_evidence":"简历证据3","analysis":"为何匹配3"}}
+],
 
-  "jd_requirements_analysis": [
-    {{
-      "requirement": "JD中的一条具体要求（如：精通MySQL数据库设计）",
-      "resume_evidence": "简历中对应的证据（如：有2年MySQL使用经验，参与过电商数据库设计）",
-      "match_degree": "完全匹配/部分匹配/未涉及",
-      "analysis": "具体分析"
-    }}
-  ],
+"gap_items":[
+  {{"aspect":"缺失维度","jd_requirement":"JD要求","severity":"high/medium/low","gap_description":"具体差距","suggestion":"补充建议"}},
+  {{"aspect":"缺失维度2","jd_requirement":"JD要求2","severity":"high/medium/low","gap_description":"具体差距2","suggestion":"补充建议2"}},
+  {{"aspect":"缺失维度3","jd_requirement":"JD要求3","severity":"high/medium/low","gap_description":"具体差距3","suggestion":"补充建议3"}}
+],
 
-  "matched_items": [
-    {{
-      "aspect": "匹配维度（如：数据库设计）",
-      "jd_requirement": "JD要求（精确描述）",
-      "resume_evidence": "简历证据（精确描述）",
-      "analysis": "为什么匹配，分析到具体细节"
-    }}
-  ],
+"knowledge_areas":[
+  {{"category":"知识领域","priority":"必考/高频/了解","topics":["知识点1","知识点2","知识点3","知识点4"]}},
+  {{"category":"知识领域2","priority":"必考/高频/了解","topics":["知识点1","知识点2","知识点3","知识点4"]}},
+  {{"category":"知识领域3","priority":"必考/高频/了解","topics":["知识点1","知识点2","知识点3","知识点4"]}}
+],
 
-  "gap_items": [
-    {{
-      "aspect": "缺失维度",
-      "jd_requirement": "JD要求",
-      "severity": "high/medium/low，表示该能力在面试中的重要程度",
-      "gap_description": "具体差距是什么",
-      "suggestion": "如何在短时间内补充这个能力"
-    }}
-  ],
+"interview_focus":["面试高频问题1","面试高频问题2","面试高频问题3"],
 
-  "knowledge_areas": [
-    {{
-      "category": "知识领域（如：数据库系统）",
-      "priority": "必考/高频/了解",
-      "topics": [
-        "该领域下的具体面试知识点1（精确到可问答题）",
-        "该领域下的具体面试知识点2",
-        "..."
-      ],
-      "jd_frequency": "该领域在JD中出现频率（高频/中频/低频）",
-      "resume_relevance": "与简历的相关程度"
-    }}
-  ],
-
-  "detailed_study_plan": [
-    {{
-      "area": "大学习领域（如：后端系统设计）",
-      "sub_areas": [
-        {{
-          "name": "子领域（如：数据库索引与优化）",
-          "importance": "high/medium/low",
-          "key_points": [
-            "必须掌握的要点1（能回答面试追问）",
-            "必须掌握的要点2",
-            "..."
-          ],
-          "study_resources": "推荐学习资源（书籍/文章/视频，具体名称）",
-          "estimated_study_time": "预计学习时间"
-        }}
-      ]
-    }}
-  ],
-
-  "interview_focus": [
-    "基于JD和简历，最可能被问到的3-5个核心问题，每个都要精确到具体技术点"
-  ],
-
-  "questions_to_prepare": [
-    {{
-      "question": "可能被问到的具体问题（精确）",
-      "answer_framework": "回答框架（STAR法则或逻辑结构）",
-      "key_points": "回答中必须包含的关键点",
-      "common_mistakes": "候选人常犯的错误"
-    }}
-  ],
-
-  "tips": [
-    "面试技巧建议1（结合JD特点）",
-    "面试技巧建议2"
-  ]
+"tips":["面试技巧1","面试技巧2"]
 }}
 
-## 要求
-1. matched_items 至少4项，gap_items 至少4项，评分客观真实不高估
-2. knowledge_areas 必须覆盖JD中提到的所有技术栈
-3. detailed_study_plan 的 sub_areas 要有层次，从基础到高级
-4. questions_to_prepare 要精确到具体技术细节，不是泛泛的问题
-5. 只输出JSON，不要markdown代码块，不要任何其他内容"""
+规则：matched_items最多3项、gap_items最多3项、knowledge_areas最多3个，每领域4个知识点。只输出JSON。"""
 
 
 RETRY_PROMPT = """上一轮的输出无法被解析为JSON。请重新输出，只输出一个合法的JSON对象，不要包含任何解释文字、markdown代码块、或任何其他内容。
@@ -274,7 +204,7 @@ def analyze_preparation(jd_text: str, resume_text: str) -> Dict[str, Any]:
     ]
 
     logger.info("开始调用 MiniMax 分析 JD 和简历...")
-    raw = llm.chat(messages, temperature=0.3, max_tokens=4096)
+    raw = llm.chat(messages, temperature=0.3, max_tokens=2048)
     logger.info(f"MiniMax 原始返回（前500字符）: {raw[:500]}")
 
     return _parse_with_retry(raw, messages)

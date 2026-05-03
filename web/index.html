@@ -775,7 +775,7 @@
     showLoading(true);
 
     try {
-      const res = await fetch('/api/analyze', {
+      const res = await fetch('/api/preparation/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jd_text: jd, resume_text: resume })
@@ -797,22 +797,22 @@
 
   function renderResult(data) {
     // Score ring
-    const score = data.score || 0;
+    const score = data.overall_score || 0;
     const circumference = 2 * Math.PI * 65; // ~408
     const offset = circumference - (score / 100) * circumference;
     document.getElementById('scoreFg').style.strokeDashoffset = offset;
     document.getElementById('scoreNum').textContent = score;
 
     // Match / Gap items
-    const matchItems = data.analysis?.match_items || [];
-    const gapItems = data.analysis?.gap_items || [];
+    const matchItems = data.matched_items || [];
+    const gapItems = data.gap_items || [];
 
     document.getElementById('matchItems').innerHTML = matchItems.length
       ? matchItems.map(m => `
         <div class="match-item match">
           <div class="match-item-label">✓ 匹配</div>
-          <div class="match-item-title">${escHtml(m.title || m.name || '')}</div>
-          <div class="match-item-desc">${escHtml(m.desc || m.reason || '')}</div>
+          <div class="match-item-title">${escHtml(m.aspect || '')}</div>
+          <div class="match-item-desc">${escHtml(m.analysis || '')}</div>
         </div>`).join('')
       : '<p style="color:var(--gray-500);font-size:13px;">暂无数据</p>';
 
@@ -820,18 +820,18 @@
       ? gapItems.map(g => `
         <div class="match-item gap">
           <div class="match-item-label">△ 不足</div>
-          <div class="match-item-title">${escHtml(g.title || g.name || '')}</div>
-          <div class="match-item-desc">${escHtml(g.desc || g.reason || '')}</div>
+          <div class="match-item-title">${escHtml(g.aspect || '')}</div>
+          <div class="match-item-desc">${escHtml(g.gap_description || '')}</div>
         </div>`).join('')
       : '<p style="color:var(--gray-500);font-size:13px;">暂无数据</p>';
 
     // Knowledge
-    const knowledge = data.analysis?.knowledge || [];
+    const knowledge = data.knowledge_areas || [];
     document.getElementById('knowledgeItems').innerHTML = knowledge.length
       ? knowledge.map(k => `
         <div class="knowledge-card">
-          <div class="kname">${escHtml(k.name || k.title || '')}</div>
-          <div class="kdetail">${escHtml(k.details || k.desc || '')}</div>
+          <div class="kname">${escHtml(k.category || '')}</div>
+          <div class="kdetail">${escHtml((k.topics || []).join('、'))}</div>
         </div>`).join('')
       : '<p style="color:var(--gray-500);font-size:13px;">暂无数据</p>';
 

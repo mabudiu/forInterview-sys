@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # 加载 .env 文件到环境变量
 
 # MiniMax API 配置 (Anthropic 兼容端点)
 MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "your-api-key-here")
