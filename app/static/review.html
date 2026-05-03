@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面试复盘 — Dolphin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --purple-50: #faf5ff; --purple-100: #f3e8ff; --purple-200: #e9d5ff;
+      --purple-300: #d8b4fe; --purple-400: #c084fc; --purple-500: #a855f7;
+      --purple-600: #9333ea; --purple-700: #7e22ce;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-300: #d1d5db; --gray-500: #6b7280; --gray-700: #374151; --gray-900: #111827;
+    }
+    body { font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; line-height: 1.6; color: var(--gray-900); min-height: 100vh; }
+    .page-gradient { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 30%, #ddd6fe 60%, #e8e0ff 100%); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px; background: rgba(255,255,255,0.65); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(167,139,250,0.15); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--gray-900); }
+    .logo-icon { width: 32px; height: 32px; }
+    .logo-text { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, var(--purple-600), var(--purple-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .tagline { font-size: 11px; color: var(--gray-500); }
+    .phase-badge { font-size: 12px; color: var(--purple-600); background: var(--purple-50); border: 1px solid rgba(167,139,250,0.25); padding: 4px 12px; border-radius: 20px; font-weight: 500; }
+
+    main { flex: 1; max-width: 920px; width: 100%; margin: 0 auto; padding: 40px 48px 64px; }
+
+    .section-header { margin-bottom: 24px; }
+    .section-title { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+    .section-desc { font-size: 13px; color: var(--gray-500); }
+
+    .card { background: rgba(255,255,255,0.88); border: 1px solid rgba(167,139,250,0.18); border-radius: 20px; padding: 30px; box-shadow: 0 4px 24px rgba(147,51,234,0.06); margin-bottom: 22px; }
+
+    /* Score grid */
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    .score-item { background: rgba(250,245,255,0.55); border: 1px solid rgba(167,139,250,0.2); border-radius: 14px; padding: 18px; text-align: center; }
+    .score-val { font-size: 34px; font-weight: 700; background: linear-gradient(135deg, var(--purple-700), var(--purple-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+    .score-label { font-size: 11px; color: var(--gray-500); margin-top: 5px; font-weight: 500; }
+    .score-sub { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+
+    /* Dim bars */
+    .dim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .dim-item { background: rgba(250,245,255,0.5); border: 1px solid rgba(167,139,250,0.18); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+    .dim-name { font-size: 12px; font-weight: 600; color: var(--gray-700); min-width: 56px; }
+    .dim-bar-wrap { flex: 1; height: 4px; background: var(--purple-100); border-radius: 2px; overflow: hidden; }
+    .dim-bar { height: 100%; background: linear-gradient(90deg, var(--purple-500), var(--purple-300)); border-radius: 2px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+    .dim-score { font-size: 12px; font-weight: 700; color: var(--purple-600); min-width: 28px; text-align: right; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; background: var(--purple-50); border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; padding: 4px; margin-bottom: 20px; width: fit-content; }
+    .tab { padding: 7px 18px; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--gray-600); cursor: pointer; border: none; background: transparent; font-family: inherit; transition: all 0.15s; }
+    .tab.active { background: white; color: var(--purple-700); font-weight: 600; box-shadow: 0 1px 4px rgba(147,51,234,0.12); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Q&A */
+    .qa-item { background: rgba(250,245,255,0.4); border: 1px solid rgba(167,139,250,0.15); border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+    .qa-q-label { font-size: 10px; font-weight: 700; color: var(--purple-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .qa-q-text { font-size: 14px; font-weight: 600; color: var(--gray-900); margin-bottom: 10px; }
+    .qa-user-label { font-size: 10px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .qa-user-a { font-size: 13px; color: var(--gray-700); background: rgba(255,255,255,0.55); border-radius: 8px; padding: 9px 12px; margin-bottom: 10px; line-height: 1.6; }
+    .qa-ideal-label { font-size: 10px; font-weight: 600; color: #16a34a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .qa-ideal-a { font-size: 13px; color: #166534; background: rgba(240,253,244,0.65); border-radius: 8px; padding: 9px 12px; line-height: 1.7; border: 1px solid rgba(74,222,128,0.2); }
+
+    /* Category group */
+    .cat-group { margin-bottom: 24px; }
+    .cat-title { font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(167,139,250,0.15); display: flex; align-items: center; gap: 8px; }
+    .cat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple-400); flex-shrink: 0; }
+
+    /* Paste area */
+    .paste-label { font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 9px; display: block; }
+    textarea { width: 100%; border: 1px solid rgba(167,139,250,0.3); border-radius: 14px; padding: 13px 15px; font-family: inherit; font-size: 13px; line-height: 1.7; resize: vertical; min-height: 150px; outline: none; background: rgba(250,245,255,0.5); color: var(--gray-900); transition: border-color 0.2s, box-shadow 0.2s; }
+    textarea:focus { border-color: var(--purple-400); box-shadow: 0 0 0 3px rgba(167,139,250,0.12); background: white; }
+    textarea::placeholder { color: var(--gray-500); }
+
+    /* Buttons */
+    .btn-primary { display: inline-flex; align-items: center; gap: 7px; padding: 11px 26px; background: linear-gradient(135deg, var(--purple-600), var(--purple-500)); color: white; border: none; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(147,51,234,0.3); text-decoration: none; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(147,51,234,0.4); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 5px; padding: 11px 18px; background: rgba(255,255,255,0.8); color: var(--purple-700); border: 1px solid rgba(167,139,250,0.3); border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .btn-ghost:hover { background: white; border-color: var(--purple-300); }
+
+    /* Loading */
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(250,245,255,0.75); backdrop-filter: blur(6px); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 38px; height: 38px; border: 3px solid var(--purple-100); border-top-color: var(--purple-500); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--purple-600); font-weight: 500; }
+
+    footer { text-align: center; padding: 22px 48px; font-size: 11px; color: var(--gray-500); border-top: 1px solid rgba(167,139,250,0.1); background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body>
+<div class="page-gradient">
+
+  <header>
+    <a class="logo" href="/static/index.html">
+      <svg class="logo-icon" viewBox="0 0 64 64" fill="none">
+        <defs><linearGradient id="dg7" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#9333ea"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs>
+        <path d="M48 20C48 20 56 14 58 22C60 30 52 34 44 36C36 38 26 40 18 36C10 32 6 24 10 18C14 12 24 12 32 16C40 20 44 26 44 26" stroke="url(#dg7)" stroke-width="2.5" stroke-linecap="round" fill="rgba(167,139,250,0.08)"/>
+        <path d="M18 36C14 34 10 30 12 26" stroke="url(#dg7)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M44 26C46 22 50 18 52 22" stroke="url(#dg7)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="52" cy="22" r="2" fill="#9333ea" opacity="0.6"/>
+      </svg>
+      <div><div class="logo-text">Dolphin</div><div class="tagline">AI 面试助手</div></div>
+    </a>
+    <div class="phase-badge">Phase 3 · 面试复盘</div>
+  </header>
+
+  <main>
+
+    <div class="section-header">
+      <div class="section-title">面试复盘</div>
+      <div class="section-desc">粘贴面试问答记录，AI 将进行打分评估并给出最佳回答参考</div>
+    </div>
+
+    <!-- Paste -->
+    <div class="card">
+      <label class="paste-label">粘贴面试问答记录（支持自由格式）</label>
+      <textarea id="pasteText" placeholder="粘贴格式示例：
+Q1: 请介绍一下你最近做的项目，你在其中的角色是什么？
+A1: 我最近做了一个电商推荐系统，负责后端架构设计...
+
+Q2: 你们系统如何解决高并发问题？
+A2: 我们采用了 Redis 缓存 + 分库分表...
+
+（或直接粘贴原始面试对话记录）"></textarea>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button class="btn-primary" onclick="analyzeReview()" id="analyzeBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          开始复盘分析
+        </button>
+        <a href="/static/interview.html" class="btn-ghost">重新模拟面试</a>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="reviewResult" style="display:none;">
+
+      <!-- Scores -->
+      <div class="card">
+        <div class="score-grid">
+          <div class="score-item">
+            <div class="score-val" id="totalScore">--</div>
+            <div class="score-label">综合得分</div>
+            <div class="score-sub">百分制</div>
+          </div>
+          <div class="score-item">
+            <div class="score-val" id="contentScore">--</div>
+            <div class="score-label">内容质量</div>
+            <div class="score-sub">完整度</div>
+          </div>
+          <div class="score-item">
+            <div class="score-val" id="depthScore">--</div>
+            <div class="score-label">深度表达</div>
+            <div class="score-sub">技术洞察</div>
+          </div>
+        </div>
+        <div class="dim-grid" id="dimGrid"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this, 'tab-qa')">问题与最佳回答</button>
+        <button class="tab" onclick="switchTab(this, 'tab-bycat')">按类别整理</button>
+        <button class="tab" onclick="switchTab(this, 'tab-raw')">原始输出</button>
+      </div>
+
+      <div id="tab-qa" class="tab-content active">
+        <div id="qaList"></div>
+      </div>
+
+      <div id="tab-bycat" class="tab-content">
+        <div id="catList"></div>
+      </div>
+
+      <div id="tab-raw" class="tab-content">
+        <div class="card" style="background:rgba(250,245,255,0.4);">
+          <pre id="rawOutput" style="font-size:12px; color:var(--gray-700); white-space:pre-wrap; line-height:1.8; font-family:inherit;"></pre>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer>Powered by MiniMax · Dolphin AI</footer>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">正在分析复盘中…</div>
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // 如果有面试历史，预填充到 textarea
+    const hist = sessionStorage.getItem('interviewHistory');
+    if (hist) {
+      try {
+        const items = JSON.parse(hist);
+        if (Array.isArray(items) && items.length > 0) {
+          const text = items.map((h, i) =>
+            `Q${i + 1}: ${h.q || ''}\nA${i + 1}: ${h.a || ''}`
+          ).join('\n\n');
+          document.getElementById('pasteText').value = text;
+        }
+      } catch(e) {}
+    }
+  });
+
+  function switchTab(btn, id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
+
+  async function analyzeReview() {
+    const text = document.getElementById('pasteText').value.trim();
+    if (!text) { alert('请粘贴面试问答记录'); return; }
+    showLoading(true);
+    try {
+      const res = await fetch('/api/review/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw_text: text })
+      });
+      const data = await res.json();
+      renderReview(data);
+    } catch(e) {
+      alert('分析失败: ' + e.message);
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  function renderReview(data) {
+    document.getElementById('reviewResult').style.display = 'block';
+    document.getElementById('reviewResult').scrollIntoView({ behavior: 'smooth' });
+
+    // Scores
+    const overall = data.overall_score ?? 0;
+    document.getElementById('totalScore').textContent = overall;
+
+    // score_breakdown 是 object {维度: 分数}
+    const bd = data.score_breakdown || {};
+    const tech = bd['技术深度'] ?? 0;
+    const expr = bd['表达清晰度'] ?? 0;
+    const logic = bd['逻辑性'] ?? 0;
+    const proj = bd['项目理解'] ?? 0;
+    document.getElementById('contentScore').textContent = tech;
+    document.getElementById('depthScore').textContent = expr;
+
+    // 维度条（支持 object 和 array 两种格式）
+    const dimGrid = document.getElementById('dimGrid');
+    const dimArray = Array.isArray(bd) ? bd : Object.entries(bd).map(([name, score]) => ({ name, score }));
+    if (dimArray.length > 0) {
+      dimGrid.innerHTML = dimArray.map(d => `
+        <div class="dim-item">
+          <div class="dim-name">${escHtml(d.name || d.label || '')}</div>
+          <div class="dim-bar-wrap"><div class="dim-bar" style="width:${d.score || 0}%"></div></div>
+          <div class="dim-score">${d.score || 0}</div>
+        </div>`).join('');
+    } else {
+      // 显示四项维度
+      dimGrid.innerHTML = [
+        { name: '技术深度', score: tech },
+        { name: '表达清晰度', score: expr },
+        { name: '逻辑性', score: logic },
+        { name: '项目理解', score: proj },
+      ].map(d => `
+        <div class="dim-item">
+          <div class="dim-name">${d.name}</div>
+          <div class="dim-bar-wrap"><div class="dim-bar" style="width:${d.score}%"></div></div>
+          <div class="dim-score">${d.score}</div>
+        </div>`).join('');
+    }
+
+    // Q&A list
+    const qaList = data.question_reviews || [];
+    document.getElementById('qaList').innerHTML = qaList.length
+      ? qaList.map((q, i) => {
+        const ds = q.dimension_scores || {};
+        const avg = q.dimension_avg || Object.values(ds).reduce((a, b) => a + b, 0) / Math.max(Object.values(ds).length, 1);
+        return `
+        <div class="qa-item">
+          <div class="qa-q-label">${escHtml(q.category || '问题')} · 第${i+1}题<span style="float:right;font-size:11px;color:var(--purple-600);font-weight:700;">均分 ${avg.toFixed(1)}</span></div>
+          <div class="qa-q-text">${escHtml(q.question || '')}</div>
+          ${Object.keys(ds).length ? `<div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;">
+            ${Object.entries(ds).map(([k, v]) => `<span style="background:var(--purple-50);border-radius:6px;padding:3px 8px;font-size:11px;">${escHtml(k)}: <b>${v}</b></span>`).join('')}
+          </div>` : ''}
+          <div class="qa-user-label">你的回答点评</div>
+          <div class="qa-user-a">${escHtml(q.answer_analysis || '')}</div>
+          <div class="qa-ideal-label">STAR最佳回答参考</div>
+          <div class="qa-ideal-a">${escHtml(q.ideal_answer || '')}</div>
+          ${q.improvement ? `<div style="margin-top:6px;padding:8px 10px;background:#fef9c3;border-radius:8px;font-size:11px;color:#92400e;"><b>💡 改进：</b>${escHtml(q.improvement)}</div>` : ''}
+        </div>`;
+      }).join('')
+      : '<p style="color:var(--gray-500);font-size:13px;padding:12px 0;">暂无数据</p>';
+
+    // By category
+    const catSum = data.category_summary || {};
+    document.getElementById('catList').innerHTML = Object.keys(catSum).length
+      ? Object.entries(catSum).map(([cat, info]) => {
+        const infoObj = typeof info === 'object' && info !== null ? info : { avg: 0, count: 0, 建议: String(info) };
+        return `
+        <div class="cat-group">
+          <div class="cat-title"><span class="cat-dot"></span>${escHtml(cat)}<span style="float:right;font-size:12px;color:var(--purple-600);font-weight:700;">均分 ${typeof infoObj.avg === 'number' ? infoObj.avg.toFixed(1) : 'N/A'}</span></div>
+          <div style="padding:4px 0;font-size:11px;color:var(--gray-500);">${escHtml(infoObj.建议 || '')}</div>
+        </div>`;
+      }).join('')
+      : '<p style="color:var(--gray-500);font-size:13px;padding:12px 0;">暂无分类数据</p>';
+
+    // Strengths / Weaknesses / Plan（放在总分旁边或单独区块）
+    const strengthsEl = document.getElementById('strengthsList') || null;
+    if (document.getElementById('strengthsList')) {
+      document.getElementById('strengthsList').innerHTML = (data.strengths || []).map(s => `<li>${escHtml(s)}</li>`).join('');
+    }
+    if (document.getElementById('weaknessesList')) {
+      document.getElementById('weaknessesList').innerHTML = (data.weaknesses || []).map(w => `<li>${escHtml(w)}</li>`).join('');
+    }
+    if (document.getElementById('improvementPlan')) {
+      document.getElementById('improvementPlan').innerHTML = (data.improvement_plan || []).map(p => `<li>${escHtml(p)}</li>`).join('');
+    }
+
+    // Raw
+    document.getElementById('rawOutput').textContent = JSON.stringify(data, null, 2);
+
+    // Reset tabs
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-qa').classList.add('active');
+    document.querySelectorAll('.tab')[0].classList.add('active');
+  }
+
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('active', show);
+    document.getElementById('analyzeBtn').disabled = show;
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模拟面试 — Dolphin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --purple-50: #faf5ff; --purple-100: #f3e8ff; --purple-200: #e9d5ff;
+      --purple-300: #d8b4fe; --purple-400: #c084fc; --purple-500: #a855f7;
+      --purple-600: #9333ea; --purple-700: #7e22ce;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-300: #d1d5db; --gray-500: #6b7280; --gray-700: #374151; --gray-900: #111827;
+    }
+    body { font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; line-height: 1.6; color: var(--gray-900); min-height: 100vh; }
+    .page-gradient { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 30%, #ddd6fe 60%, #e8e0ff 100%); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px; background: rgba(255,255,255,0.65); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(167,139,250,0.15); position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--gray-900); }
+    .logo-icon { width: 32px; height: 32px; }
+    .logo-text { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, var(--purple-600), var(--purple-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .tagline { font-size: 11px; color: var(--gray-500); }
+    .phase-badge { font-size: 12px; color: var(--purple-600); background: var(--purple-50); border: 1px solid rgba(167,139,250,0.25); padding: 4px 12px; border-radius: 20px; font-weight: 500; }
+
+    main { flex: 1; max-width: 820px; width: 100%; margin: 0 auto; padding: 40px 48px 64px; }
+
+    /* Progress */
+    .progress-bar-wrap { margin-bottom: 32px; }
+    .progress-info { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray-500); margin-bottom: 7px; }
+    .progress-track { height: 3px; background: rgba(167,139,250,0.2); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--purple-500), var(--purple-300)); border-radius: 3px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+
+    /* Question card */
+    .question-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(167,139,250,0.2); border-radius: 20px; padding: 34px; box-shadow: 0 4px 24px rgba(147,51,234,0.07); margin-bottom: 22px; }
+    .q-header { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 16px; }
+    .q-icon { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-500), var(--purple-300)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .q-icon svg { width: 17px; height: 17px; color: white; }
+    .q-meta { font-size: 10px; color: var(--gray-500); font-weight: 600; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .q-text { font-size: 16px; font-weight: 600; color: var(--gray-900); line-height: 1.55; }
+    .q-context { background: var(--purple-50); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: var(--purple-700); margin-bottom: 16px; border: 1px solid rgba(167,139,250,0.15); }
+    .q-context strong { font-weight: 600; display: block; margin-bottom: 3px; }
+
+    /* Answer */
+    textarea { width: 100%; border: 1px solid rgba(167,139,250,0.3); border-radius: 14px; padding: 13px 15px; font-family: inherit; font-size: 13px; line-height: 1.7; resize: vertical; min-height: 110px; outline: none; background: rgba(250,245,255,0.5); color: var(--gray-900); transition: border-color 0.2s, box-shadow 0.2s; }
+    textarea:focus { border-color: var(--purple-400); box-shadow: 0 0 0 3px rgba(167,139,250,0.12); background: white; }
+    textarea::placeholder { color: var(--gray-500); }
+    .answer-label { font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 8px; display: block; }
+    .btn-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 7px; padding: 11px 26px; background: linear-gradient(135deg, var(--purple-600), var(--purple-500)); color: white; border: none; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(147,51,234,0.3); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(147,51,234,0.4); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 5px; padding: 11px 18px; background: rgba(255,255,255,0.8); color: var(--purple-700); border: 1px solid rgba(167,139,250,0.3); border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .btn-ghost:hover { background: white; border-color: var(--purple-300); }
+    .hint { font-size: 11px; color: var(--gray-400); margin-top: 7px; }
+
+    .answer-toolbar { display: flex; align-items: center; margin-bottom: 6px; }
+    .voice-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; background: rgba(255,255,255,0.9); border: 1px solid rgba(167,139,250,0.3); border-radius: 8px; font-size: 12px; color: var(--purple-600); cursor: pointer; transition: all 0.2s; }
+    .voice-btn:hover { background: var(--purple-50); border-color: var(--purple-300); }
+    .voice-btn.recording { background: #fef2f2; border-color: #f87171; color: #dc2626; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+    /* History */
+    .history-section { margin-top: 36px; }
+    .history-title { font-size: 12px; font-weight: 700; color: var(--gray-700); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .history-title::before { content: ''; width: 4px; height: 14px; background: linear-gradient(to bottom, var(--purple-500), var(--purple-300)); border-radius: 2px; }
+    .history-item { background: rgba(255,255,255,0.65); border: 1px solid rgba(167,139,250,0.15); border-radius: 12px; padding: 15px 17px; margin-bottom: 10px; }
+    .history-q { font-size: 11px; font-weight: 700; color: var(--purple-600); margin-bottom: 4px; }
+    .history-a { font-size: 12px; color: var(--gray-700); line-height: 1.6; }
+    .history-a-skipped { font-size: 12px; color: var(--gray-400); font-style: italic; }
+
+    /* Waiting / End */
+    .waiting-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(167,139,250,0.2); border-radius: 20px; padding: 56px 40px; text-align: center; box-shadow: 0 4px 24px rgba(147,51,234,0.07); }
+    .waiting-dolphin { font-size: 56px; margin-bottom: 18px; }
+    .waiting-title { font-size: 18px; font-weight: 700; color: var(--gray-900); margin-bottom: 7px; }
+    .waiting-desc { font-size: 13px; color: var(--gray-500); margin-bottom: 22px; }
+
+    /* Empty */
+    .empty-card { background: rgba(255,255,255,0.85); border: 1px solid rgba(167,139,250,0.2); border-radius: 20px; padding: 56px 40px; text-align: center; }
+    .empty-title { font-size: 17px; font-weight: 700; color: var(--gray-900); margin-bottom: 7px; }
+    .empty-desc { font-size: 13px; color: var(--gray-500); margin-bottom: 18px; }
+
+    /* Loading */
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(250,245,255,0.75); backdrop-filter: blur(6px); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 38px; height: 38px; border: 3px solid var(--purple-100); border-top-color: var(--purple-500); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 13px; color: var(--purple-600); font-weight: 500; }
+
+    footer { text-align: center; padding: 22px 48px; font-size: 11px; color: var(--gray-500); border-top: 1px solid rgba(167,139,250,0.1); background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body>
+<div class="page-gradient">
+
+  <header>
+    <a class="logo" href="/static/index.html">
+      <svg class="logo-icon" viewBox="0 0 64 64" fill="none">
+        <defs><linearGradient id="dg5" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#9333ea"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs>
+        <path d="M48 20C48 20 56 14 58 22C60 30 52 34 44 36C36 38 26 40 18 36C10 32 6 24 10 18C14 12 24 12 32 16C40 20 44 26 44 26" stroke="url(#dg5)" stroke-width="2.5" stroke-linecap="round" fill="rgba(167,139,250,0.08)"/>
+        <path d="M18 36C14 34 10 30 12 26" stroke="url(#dg5)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M44 26C46 22 50 18 52 22" stroke="url(#dg5)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="52" cy="22" r="2" fill="#9333ea" opacity="0.6"/>
+      </svg>
+      <div><div class="logo-text">Dolphin</div><div class="tagline">AI 面试助手</div></div>
+    </a>
+    <div class="phase-badge">Phase 2 · 模拟面试</div>
+  </header>
+
+  <main>
+
+    <div class="progress-bar-wrap" id="progressWrap" style="display:none;">
+      <div class="progress-info">
+        <span id="progressLabel">问题 1</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <!-- Empty -->
+    <div class="empty-card" id="emptyState">
+      <div class="empty-title">暂无面试上下文</div>
+      <div class="empty-desc">请先完成 JD 与简历分析</div>
+      <a href="/static/index.html" class="btn-primary" style="text-decoration:none;">去上传分析</a>
+    </div>
+
+    <!-- Interview area -->
+    <div id="interviewArea" style="display:none;">
+      <div class="question-card" id="questionCard">
+        <div class="q-header">
+          <div class="q-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <div class="q-meta" id="qMeta">核心能力 · 第 1 题</div>
+            <div class="q-text" id="qText">正在生成问题…</div>
+          </div>
+        </div>
+        <div class="q-context" id="qContext" style="display:none;"></div>
+      </div>
+
+      <div>
+        <label class="answer-label">你的回答</label>
+        <div class="answer-toolbar">
+          <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="语音输入">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <span id="voiceLabel">语音</span>
+          </button>
+        </div>
+        <textarea id="answerText" placeholder="请输入你的回答…" onkeydown="if(event.ctrlKey && event.key==='Enter') submitAnswer()"></textarea>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="submitAnswer()" id="submitBtn">
+            提交回答
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+          <button class="btn-ghost" onclick="skipQuestion()">跳过此题</button>
+          <button class="btn-ghost" onclick="endInterview()">结束面试</button>
+        </div>
+        <div class="hint">Ctrl + Enter 快捷提交</div>
+      </div>
+
+      <div class="history-section" id="historySection" style="display:none;">
+        <div class="history-title">已回答问题</div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- Waiting / Done -->
+    <div class="waiting-card" id="waitingCard" style="display:none;">
+      <div class="waiting-dolphin">
+        <svg width="72" height="72" viewBox="0 0 64 64" fill="none">
+          <defs><linearGradient id="dg6" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#9333ea"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs>
+          <path d="M48 20C48 20 56 14 58 22C60 30 52 34 44 36C36 38 26 40 18 36C10 32 6 24 10 18C14 12 24 12 32 16C40 20 44 26 44 26" stroke="url(#dg6)" stroke-width="2.5" stroke-linecap="round" fill="rgba(167,139,250,0.1)"/>
+          <path d="M18 36C14 34 10 30 12 26" stroke="url(#dg6)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M44 26C46 22 50 18 52 22" stroke="url(#dg6)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="52" cy="22" r="2" fill="#9333ea" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="waiting-title" id="waitingTitle">海豚正在思考…</div>
+      <div class="waiting-desc" id="waitingDesc">正在生成问题</div>
+      <a href="/static/review.html" class="btn-primary" style="text-decoration:none; display:none;" id="toReviewBtn">去面试复盘</a>
+    </div>
+
+  </main>
+
+  <footer>Powered by MiniMax · Dolphin AI</footer>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">海豚正在准备问题…</div>
+</div>
+
+<script>
+  let currentQuestion = null;   // 当前问题文本
+  let currentQuestionObj = null; // 完整问题对象
+  let questionIndex = 0;
+  let totalQuestions = 10;
+  let sessionAnswers = [];       // [{q: string, a: string}]
+  let analysisData = null; // 存 interviewCtx: {analysis, jd_text, resume_text}
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // 统一从 interviewCtx 读取（index.html enterMockInterview 时写入）
+    const saved = sessionStorage.getItem('interviewCtx');
+    if (saved) {
+      try {
+        analysisData = JSON.parse(saved); // {analysis, jd_text, resume_text}
+        startInterview();
+      } catch(e) { showEmpty(); }
+    } else {
+      showEmpty();
+    }
+  });
+
+  function showEmpty() {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('interviewArea').style.display = 'none';
+    document.getElementById('waitingCard').style.display = 'none';
+  }
+
+  function startInterview() {
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('interviewArea').style.display = 'block';
+    document.getElementById('waitingCard').style.display = 'none';
+    questionIndex = 0;
+    sessionAnswers = [];
+    currentQuestion = null;
+    currentQuestionObj = null;
+    updateProgress();
+    generateNextQuestion(null);
+  }
+
+  async function generateNextQuestion(lastAnswer) {
+    showWaiting('海豚正在思考…', '正在根据上下文生成问题');
+
+    // 记录上一轮回答
+    if (lastAnswer !== null && currentQuestion !== null) {
+      sessionAnswers.push({ q: currentQuestion, a: lastAnswer });
+    }
+
+    try {
+      const res = await fetch('/api/interview/next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysis: analysisData,
+          history: sessionAnswers,
+          last_question: currentQuestion,
+          last_answer: lastAnswer
+        })
+      });
+      const data = await res.json();
+
+      if (data.done) {
+        // 保存评价数据，然后显示
+        if (data.evaluation) window._interviewEval = data.evaluation;
+        endInterviewSession(sessionAnswers);
+        return;
+      }
+
+      currentQuestionObj = data.question || {};
+      currentQuestion = currentQuestionObj.text || currentQuestionObj.question || '';
+      questionIndex++;
+      updateProgress();
+      showQuestion(currentQuestionObj);
+
+    } catch(e) {
+      alert('生成问题失败: ' + e.message);
+      hideWaiting();
+    }
+  }
+
+  function showQuestion(q) {
+    hideWaiting();
+    document.getElementById('interviewArea').style.display = 'block';
+    document.getElementById('waitingCard').style.display = 'none';
+    document.getElementById('qMeta').textContent = `${q.category || '问题'} · 第 ${questionIndex} 题`;
+    document.getElementById('qText').textContent = q.text || q.question || '';
+    const ctx = document.getElementById('qContext');
+    if (q.context) {
+      ctx.innerHTML = `<strong>背景：</strong>${escHtml(q.context)}`;
+      ctx.style.display = 'block';
+    } else {
+      ctx.style.display = 'none';
+    }
+    document.getElementById('answerText').value = '';
+    document.getElementById('answerText').focus();
+    updateHistory();
+  }
+
+  function showWaiting(title, desc) {
+    document.getElementById('interviewArea').style.display = 'none';
+    document.getElementById('waitingCard').style.display = 'block';
+    document.getElementById('waitingTitle').textContent = title;
+    document.getElementById('waitingDesc').textContent = desc;
+    document.getElementById('toReviewBtn').style.display = 'none';
+  }
+
+  function hideWaiting() {
+    document.getElementById('waitingCard').style.display = 'none';
+  }
+
+  function updateProgress() {
+    const pct = totalQuestions > 0 ? Math.round(((questionIndex - 1) / totalQuestions) * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `问题 ${Math.max(1, questionIndex)} / ${totalQuestions}`;
+    document.getElementById('progressPct').textContent = pct + '%';
+  }
+
+  function updateHistory() {
+    if (sessionAnswers.length === 0) {
+      document.getElementById('historySection').style.display = 'none';
+      return;
+    }
+    document.getElementById('historySection').style.display = 'block';
+    document.getElementById('historyList').innerHTML = sessionAnswers.map((h, i) => `
+      <div class="history-item">
+        <div class="history-q">Q${i + 1}：${escHtml(h.q || '')}</div>
+        <div class="history-a">${h.a ? escHtml(h.a) : '<span class="history-a-skipped">（跳过）</span>'}</div>
+      </div>`).join('');
+  }
+
+  function submitAnswer() {
+    const text = document.getElementById('answerText').value.trim();
+    if (!text) { alert('请输入回答'); return; }
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    generateNextQuestion(text).finally(() => { btn.disabled = false; });
+  }
+
+  function skipQuestion() { generateNextQuestion(null); }
+
+  function endInterviewSession(finalHistory) {
+    sessionStorage.setItem('interviewHistory', JSON.stringify(finalHistory || sessionAnswers));
+    sessionStorage.removeItem('interviewCtx');
+    sessionStorage.removeItem('analysisResult');
+    document.getElementById('interviewArea').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('waitingCard').style.display = 'block';
+    document.getElementById('waitingTitle').textContent = '面试结束！';
+    document.getElementById('waitingDesc').textContent = `共回答 ${(finalHistory || sessionAnswers).length} 个问题`;
+    document.getElementById('toReviewBtn').style.display = 'none';
+
+    // 显示面试系统性评价（如果有）
+    const evalData = window._interviewEval;
+    if (evalData) {
+      const evalDiv = document.createElement('div');
+      evalDiv.style.cssText = 'margin-top:20px;text-align:left;background:rgba(255,255,255,0.9);border-radius:14px;padding:20px;max-width:600px;margin-left:auto;margin-right:auto;';
+      let html = `<div style="font-size:13px;font-weight:700;color:var(--purple-700);margin-bottom:12px;">📋 本次面试评价</div>`;
+      if (evalData.overall_score !== undefined) {
+        html += `<div style="font-size:28px;font-weight:800;color:var(--purple-600);margin-bottom:12px;">${evalData.overall_score} <span style="font-size:14px;color:var(--gray-500);font-weight:400;">/ 100</span></div>`;
+      }
+      const bd = evalData.score_breakdown || {};
+      if (Object.keys(bd).length) {
+        html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">`;
+        for (const [k, v] of Object.entries(bd)) {
+          html += `<div style="background:var(--purple-50);border-radius:8px;padding:8px 12px;font-size:12px;"><span style="color:var(--gray-700);">${k}</span><span style="float:right;font-weight:700;color:var(--purple-600);">${v}</span></div>`;
+        }
+        html += `</div>`;
+      }
+      const mk = (arr) => arr && Array.isArray(arr) ? arr.map(s => `<li style="margin-bottom:5px;">${escHtml(s)}</li>`).join('') : '';
+      if (evalData.strengths?.length) html += `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:4px;">✔ 优点</div><ul style="padding-left:16px;font-size:12px;color:var(--gray-700);">${mk(evalData.strengths)}</ul></div>`;
+      if (evalData.weaknesses?.length) html += `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">✘ 不足</div><ul style="padding-left:16px;font-size:12px;color:var(--gray-700);">${mk(evalData.weaknesses)}</ul></div>`;
+      if (evalData.next_focus?.length) html += `<div style="font-size:11px;color:var(--gray-500);margin-top:8px;">📚 下阶段建议：${escHtml(evalData.next_focus.join('、'))}</div>`;
+      evalDiv.innerHTML = html;
+      document.getElementById('waitingCard').appendChild(evalDiv);
+      window._interviewEval = null;
+    }
+  }
+
+  function endInterview() {
+    if (!confirm('确定要结束面试吗？')) return;
+    endInterviewSession(sessionAnswers);
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── 语音输入 ──────────────────────────────────
+  let rec = null;
+  let finalTranscript = '';
+  function toggleVoice() {
+    const btn = document.getElementById('voiceBtn');
+    const label = document.getElementById('voiceLabel');
+    if (rec && rec.recording) {
+      rec.stop();
+      return;
+    }
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('当前浏览器不支持语音识别，请使用 Chrome 或 Edge'); return;
+    }
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    rec = new SpeechRec();
+    rec.lang = 'zh-CN';
+    rec.continuous = true;
+    rec.interimResults = true;
+    finalTranscript = '';
+    rec.onstart = () => { btn.classList.add('recording'); label.textContent = '录音中…'; rec.recording = true; };
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalTranscript += t;
+        else interim += t;
+      }
+      const ta = document.getElementById('answerText');
+      ta.value = finalTranscript + interim;
+    };
+    rec.onerror = (e) => { console.error('speech error', e.error); btn.classList.remove('recording'); label.textContent = '语音'; rec.recording = false; };
+    rec.onend = () => { btn.classList.remove('recording'); label.textContent = '语音'; rec.recording = false; };
+    rec.start();
+  }
+</script>
+</body>
+</html>
