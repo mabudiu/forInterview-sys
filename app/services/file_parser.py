@@ -29,9 +29,14 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
 
 
 def extract_text_from_image(file_bytes: bytes) -> str:
-    """从图片(PNG/JPG)通过 OCR 提取文本"""
+    """从图片(PNG/JPG)通过 OCR 提取文本，支持中文"""
     img = Image.open(BytesIO(file_bytes))
-    text = pytesseract.image_to_string(img, lang="chi+eng")
+    # 转RGB（pytesseract需要）
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    # 使用简体中文+英文训练数据，PSM 3适合文档图像
+    text = pytesseract.image_to_string(img, lang="chi_sim+eng", config="--psm 3")
     return text
 
 
