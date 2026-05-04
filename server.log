@@ -1,0 +1,43 @@
+INFO:     Will watch for changes in these directories: ['/Users/apple/interview-system']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [73076] using StatReload
+INFO:     Started server process [73079]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:49720 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49886 - "GET / HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:49886 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49887 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49887 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49887 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49887 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50118 - "GET /static/index.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50119 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51066 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51124 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51444 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52130 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52860 - "GET /static/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52860 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52860 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54362 - "GET / HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:54498 - "POST /api/preparation/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54536 - "POST /api/preparation/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54723 - "POST /api/preparation/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55025 - "POST /api/preparation/upload HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'app/services/file_parser.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [73079]
+INFO:     Started server process [76932]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app/services/file_parser.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [76932]
+INFO:     Started server process [77010]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

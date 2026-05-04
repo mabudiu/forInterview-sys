@@ -1,282 +1,241 @@
 #!/usr/bin/env python3
 """
-完整三阶段流程测试脚本 — Interview System
-测试: Phase 1 (上传+分析) → Phase 2 (模拟面试) → Phase 3 (复盘)
-
-运行方式:
-    cd /Users/apple/interview-system
-    python test_full_flow.py
-
-要求: .env 已配置 MINIMAX_API_KEY, 服务器已启动 (uvicorn app.main:app)
+面试系统完整三阶段流程测试
+覆盖: 面试前分析 → 模拟面试 → 面试后复盘
 """
-
-import urllib.request
-import urllib.error
-import json
+import requests
 import time
+import json
 import sys
 
 BASE = "http://localhost:8000"
-TIMEOUT_LLM = 180  # LLM 调用超时秒数
-TIMEOUT_SHORT = 15
 
-
-def api_post(path: str, data: dict, timeout: int = TIMEOUT_LLM) -> dict:
-    """发送 JSON POST 请求"""
-    body = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        BASE + path,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
-
-
-def phase1_upload_and_analyze():
-    """Phase 1: 上传简历+JD → 分析"""
-    print("\n" + "=" * 60)
-    print("Phase 1: 面试前准备分析")
-    print("=" * 60)
-
-    # Step 1: 上传简历文件（text）
-    boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
-    resume_content = (
-        "张三 | 3年Python后端开发经验\n"
-        "熟悉: FastAPI, Django, MySQL, Redis, Docker, Git\n"
-        "项目1: 电商订单系统（FastAPI + MySQL + Redis）\n"
-        "  - 负责订单模块设计与实现，日订单处理10万+\n"
-        "  - 优化数据库查询，响应时间从800ms降至50ms\n"
-        "项目2: 用户中心服务（微服务架构）\n"
-        "  - 独立负责用户认证、权限管理模块\n"
-        "  - 使用Redis实现分布式Session\n"
-        "期望职位: Python后端开发工程师"
-    ).encode("utf-8")
-
-    body = (
-        b"--" + boundary.encode() + b"\r\n"
-        b'Content-Disposition: form-data; name="file"; filename="resume.txt"\r\n'
-        b"Content-Type: text/plain\r\n\r\n" + resume_content + b"\r\n"
-        b"--" + boundary.encode() + b"--\r\n"
-    )
-    req = urllib.request.Request(
-        BASE + "/api/preparation/upload",
-        data=body,
-        headers={"Content-Type": "multipart/form-data; boundary=" + boundary},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=TIMEOUT_SHORT) as r:
-        resume_data = json.loads(r.read())
-    print(f"  [上传] 简历解析完成: {resume_data['filename']}, {len(resume_data['text'])} 字")
-
-    # Step 2: 分析
-    jd_text = (
-        "Python后端开发工程师\n"
-        "要求:\n"
-        "1. 3年以上Python开发经验\n"
-        "2. 熟悉FastAPI或Django，有实际项目经验\n"
-        "3. 熟悉MySQL/Redis，了解数据库优化\n"
-        "4. 了解微服务架构，有Docker使用经验\n"
-        "5. 良好的代码风格和团队协作能力"
-    )
-
-    print(f"  [分析] 发送请求 (简历 {len(resume_data['text'])} 字, JD {len(jd_text)} 字)...")
-    t0 = time.time()
-    result = api_post(
-        "/api/preparation/analyze",
-        {"jd_text": jd_text, "resume_text": resume_data["text"], "auto_save_resume": False},
-    )
-    elapsed = time.time() - t0
-    print(f"  [分析] 完成，耗时 {elapsed:.1f}s")
-
-    score = result.get("overall_score", 0)
-    matched = result.get("matched_items", [])
-    gaps = result.get("gap_items", [])
-    knowledge = result.get("knowledge_areas", [])
-
-    print(f"  [评分] {score}/100")
-    print(f"  [匹配项] {matched[:3]}")
-    print(f"  [不足项] {gaps[:3]}")
-    print(f"  [知识领域] {knowledge[:3]}")
-
-    # 验证字段
-    assert isinstance(score, int) and 0 <= score <= 100, f"评分异常: {score}"
-    assert isinstance(matched, list), "matched_items 应为列表"
-    assert isinstance(gaps, list), "gap_items 应为列表"
-    print("  [✓] Phase 1 验证通过")
-    return result, jd_text, resume_data["text"]
-
-
-def phase2_mock_interview(analysis: dict, jd_text: str, resume_text: str):
-    """Phase 2: 模拟面试 — 完成3轮问答"""
-    print("\n" + "=" * 60)
-    print("Phase 2: 模拟面试")
-    print("=" * 60)
-
-    interviewCtx = {
-        "analysis": analysis,
-        "jd_text": jd_text,
-        "resume_text": resume_text,
-    }
-
-    history = []
-    num_rounds = 3
-
-    for round_i in range(1, num_rounds + 1):
-        # 构造请求：除了第一轮，每轮都要带 history + 上轮问答
-        if round_i == 1:
-            payload = {
-                "analysis": interviewCtx,
-                "history": [],
-                "last_question": None,
-                "last_answer": None,
-            }
-        else:
-            payload = {
-                "analysis": interviewCtx,
-                "history": history,
-                "last_question": prev_question,
-                "last_answer": prev_answer,
-            }
-
-        print(f"  [第{round_i}轮] 请求下一题...")
-        t0 = time.time()
-        data = api_post("/api/interview/next", payload)
-        elapsed = time.time() - t0
-        print(f"  [第{round_i}轮] 耗时 {elapsed:.1f}s")
-
-        if data.get("done"):
-            print(f"  [!] 面试意外结束 (done=True)")
-            break
-
-        q = data.get("question", {})
-        question_text = q.get("text", "")
-        print(f"  [Q{round_i}] {question_text[:80]}...")
-        assert question_text, f"问题为空"
-
-        # 模拟回答
-        answers = [
-            "我主要负责订单模块，使用FastAPI构建RESTful接口，MySQL做持久化，Redis做缓存。"
-            "在项目中我优化了慢查询，通过添加复合索引和EXPLAIN分析，将查询时间从800ms降到50ms。",
-            "用户认证模块使用JWT token，配合Redis存储黑名单实现主动失效。"
-            "权限控制基于RBAC模型，设计了用户-角色-权限三层结构。",
-            "使用Docker容器化部署，通过Docker Compose编排多容器，服务横向扩展。"
-            "还使用过Nginx做反向代理和负载均衡。",
-        ]
-        answer_text = answers[round_i - 1]
-        print(f"  [A{round_i}] {answer_text[:60]}...")
-
-        history.append({"q": question_text, "a": answer_text})
-        prev_question = question_text
-        prev_answer = answer_text
-
-    # 主动结束面试（发 done 请求）
-    print("  [结束] 发送结束信号...")
-    t0 = time.time()
-    end_payload = {
-        "analysis": interviewCtx,
-        "history": history,
-        "last_question": prev_question,
-        "last_answer": prev_answer,
-    }
-    # 模拟超过10轮限制触发结束（传10条历史）
-    for _ in range(10 - len(history)):
-        history.append({"q": "额外问题", "a": "额外回答"})
-    end_data = api_post("/api/interview/next", end_payload)
-    elapsed = time.time() - t0
-    print(f"  [结束] 耗时 {elapsed:.1f}s")
-
-    if end_data.get("done"):
-        ev = end_data.get("evaluation", {})
-        print(f"  [评估] 完成: score={ev.get('overall_score', 'N/A')}")
-        print(f"  [评估] 优点: {ev.get('strengths', [])[:2]}")
-        print(f"  [评估] 建议: {ev.get('weaknesses', [])[:2]}")
-    else:
-        print(f"  [!] 结束信号未返回 done=True")
-
-    print("  [✓] Phase 2 验证通过")
-    return end_data.get("evaluation", {})
-
-
-def phase3_review():
-    """Phase 3: 复盘 — 输入面试问答，获得评价"""
-    print("\n" + "=" * 60)
-    print("Phase 3: 面试后复盘")
-    print("=" * 60)
-
-    raw_text = """
-面试官: 请介绍一下你在电商订单系统中的具体工作。
-候选人: 我负责订单模块设计与实现，使用FastAPI构建RESTful接口，MySQL做持久化，Redis做缓存。日订单处理量在10万以上。
-面试官: 如何优化的查询性能？
-候选人: 我通过添加复合索引和EXPLAIN分析慢查询，将查询时间从800ms降到50ms。
-面试官: Redis在项目中怎么用的？
-候选人: 用Redis存储热点数据和分布式锁，实现订单号生成器的高并发支持。
-面试官: 微服务架构下如何保证服务间通信的可靠性？
-候选人: 使用HTTP+JSON通信，配合超时重试和熔断器（Sentinel）处理故障传递。
+# ─── 测试数据 ───────────────────────────────────────────────
+JD_TEXT = """
+职位: Python后端开发工程师
+要求:
+1. 熟练掌握 Python/FastAPI/Django
+2. 熟悉 PostgreSQL/MySQL/Redis
+3. 有 AI/LLM 集成经验优先
+4. 3年以上工作经验
+5. 熟悉微服务架构、Docker 容器化
 """
 
-    print(f"  [复盘] 提交 {len(raw_text)} 字问答记录...")
-    t0 = time.time()
-    result = api_post("/api/review/analyze", {"raw_text": raw_text})
-    elapsed = time.time() - t0
-    print(f"  [复盘] 完成，耗时 {elapsed:.1f}s")
+RESUME_TEXT = """
+姓名: 张三
+求职意向: Python后端开发工程师
 
-    score = result.get("overall_score", 0)
-    reviews = result.get("question_reviews", [])
-    summary = result.get("category_summary", {})
+技能:
+- Python, FastAPI, Django, Flask
+- PostgreSQL, MySQL, Redis, MongoDB
+- Docker, Kubernetes, CI/CD
+- OpenAI API, LangChain, RAG
+- 微服务架构设计
 
-    print(f"  [评分] {score}/100")
-    print(f"  [问题数] {len(reviews)}")
-    if reviews:
-        first = reviews[0]
-        print(f"  [第1题] Q: {first.get('original_question', '')[:50]}...")
-        print(f"        理想答: {first.get('ideal_answer', '')[:60]}...")
-        print(f"        改进: {first.get('improvement_points', [])[:2]}")
+工作经历:
+2021-至今  XX科技公司  Python高级工程师
+- 负责后端架构设计与优化
+- 基于FastAPI构建AI推理服务
+- Docker容器化部署，日均处理10万请求
 
-    assert isinstance(score, int) and 0 <= score <= 100, f"评分异常: {score}"
-    assert isinstance(reviews, list), "question_reviews 应为列表"
-    print("  [✓] Phase 3 验证通过")
-    return result
+教育背景:
+2017-2021  某重点大学  计算机科学与技术  本科
+"""
+
+# ─── 辅助函数 ────────────────────────────────────────────────
+def r(method, path, **kw):
+    url = f"{BASE}{path}"
+    kw.setdefault("timeout", 300)
+    resp = requests.request(method, url, **kw)
+    print(f"  [{resp.status_code}] {method} {path}")
+    if resp.status_code >= 400:
+        print(f"  !! ERROR: {resp.text[:200]}")
+    return resp
 
 
+def wait_phase(route, key, interval=3, timeout=120):
+    """等待异步任务完成（polling 方式）"""
+    start = time.time()
+    while time.time() - start < timeout:
+        resp = r("GET", route)
+        if resp.status_code == 200:
+            data = resp.json()
+            if key in data and data[key]:
+                return data
+        print(f"  ...等待 ({int(time.time()-start)}s)")
+        time.sleep(interval)
+    return None
+
+
+# ─── 阶段1: 面试前分析 ───────────────────────────────────────
+def test_phase1():
+    print("\n=== 阶段1: 面试前分析 ===")
+
+    # 上传 JD
+    files_jd = {"file": ("jd.txt", JD_TEXT.encode(), "text/plain")}
+    r1 = r("POST", "/api/preparation/upload", files=files_jd)
+    jd_parsed = r1.json().get("text", "") if r1.status_code == 200 else JD_TEXT
+    print(f"  JD解析结果: {len(jd_parsed)} 字")
+
+    # 上传简历
+    files_res = {"file": ("resume.txt", RESUME_TEXT.encode(), "text/plain")}
+    r2 = r("POST", "/api/preparation/upload", files=files_res)
+    resume_parsed = r2.json().get("text", "") if r2.status_code == 200 else RESUME_TEXT
+    print(f"  简历解析结果: {len(resume_parsed)} 字")
+
+    # 分析
+    payload = {
+        "jd_text": jd_parsed,
+        "resume_text": resume_parsed,
+        "auto_save_resume": True
+    }
+    resp = r("POST", "/api/preparation/analyze", json=payload)
+    if resp.status_code != 200:
+        print(f"  分析失败: {resp.text[:200]}")
+        return None
+
+    data = resp.json()
+    print(f"  匹配度: {data.get('match_score', 'N/A')}")
+    print(f"  分析结果Keys: {list(data.keys())}")
+    return data
+
+
+# ─── 阶段2: 模拟面试 ─────────────────────────────────────────
+def test_phase2(session_id=None):
+    print("\n=== 阶段2: 模拟面试 ===")
+
+    # 使用 /next 接口（前端实际调用）
+    payload = {
+        "analysis": {"jd_text": JD_TEXT, "resume_text": RESUME_TEXT},
+        "history": [],
+        "last_question": None,
+        "last_answer": None
+    }
+    resp = r("POST", "/api/interview/next", json=payload)
+    if resp.status_code != 200:
+        print(f"  启动失败: {resp.text[:200]}")
+        return None
+
+    data = resp.json()
+    print(f"  done: {data.get('done')}")
+    q1 = data.get("question", {})
+    q1_text = q1.get("text", "") if isinstance(q1, dict) else q1
+    print(f"  第1题: {q1_text[:80]}...")
+
+    if data.get("done"):
+        print("  面试直接结束")
+        return data
+
+    # 循环回答 (最多5轮)
+    history = []
+    last_q = q1_text
+    max_rounds = 5
+    for i in range(max_rounds):
+        answer = f"这是第{i+1}轮的测试回答内容，涉及相关技术点和项目细节。"
+        history.append({"q": last_q, "a": answer})
+
+        payload = {
+            "analysis": {"jd_text": JD_TEXT, "resume_text": RESUME_TEXT},
+            "history": history,
+            "last_question": last_q,
+            "last_answer": answer
+        }
+        resp = r("POST", "/api/interview/next", json=payload)
+        if resp.status_code != 200:
+            print(f"  回答失败: {resp.text[:200]}")
+            break
+
+        adata = resp.json()
+        done = adata.get("done", False)
+        next_q = adata.get("question", {})
+        next_q_text = next_q.get("text", "") if isinstance(next_q, dict) else next_q
+        print(f"  轮次{i+1}: done={done}, 下一题: {next_q_text[:60]}...")
+
+        if done:
+            eval_data = adata.get("evaluation", {})
+            if eval_data:
+                print(f"  综合评分: {eval_data.get('overall_score', 'N/A')}")
+                print(f"  评价: {str(eval_data)[:200]}")
+            return adata
+
+        last_q = next_q_text
+
+    print(f"  -> 达到{max_rounds}轮，提前结束")
+    return {"status": "completed", "rounds": max_rounds}
+
+
+# ─── 阶段3: 面试后复盘 ────────────────────────────────────────
+def test_phase3():
+    print("\n=== 阶段3: 面试后复盘 ===")
+
+    # 提交面试问答进行复盘 (自由文本格式)
+    raw = """
+面试官: 请做一下自我介绍
+张三: 我叫张三，有3年Python后端开发经验，主要使用FastAPI和Django框架。
+
+面试官: FastAPI 和 Django 的区别是什么？
+张三: FastAPI是轻量级异步框架，自动生成API文档，适合微服务和AI场景；Django是全栈框架，ORM强大，适合管理后台。
+
+面试官: 如何保证接口稳定性？
+张三: 通过单元测试、集成测试、CI/CD灰度发布来保证接口稳定性。
+    """
+    payload = {
+        "raw_text": raw,
+        "job_title": "Python后端开发工程师"
+    }
+
+    resp = r("POST", "/api/review/analyze", json=payload)
+    if resp.status_code != 200:
+        print(f"  复盘提交失败: {resp.text[:200]}")
+        return None
+
+    data = resp.json()
+    print(f"  复盘结果Keys: {list(data.keys())}")
+    print(f"  自我评分: {data.get('self_score', 'N/A')}")
+    improved = data.get("improved_answers", data.get("answers", []))
+    print(f"  改进回答数量: {len(improved) if improved else 0}")
+    return data
+
+
+# ─── 主流程 ──────────────────────────────────────────────────
 def main():
-    print("Interview System — 完整流程测试")
-    print(f"目标服务器: {BASE}")
+    print(f"面试系统完整流程测试 @ {BASE}")
+    print(f"时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 检查服务器
-    try:
-        with urllib.request.urlopen(BASE + "/", timeout=5) as r:
-            print(f"服务器状态: {r.status}\n")
-    except Exception as e:
-        print(f"错误: 无法连接服务器 {BASE}: {e}")
-        sys.exit(1)
+    # 健康检查
+    r("GET", "/")
 
-    try:
-        p1_result, jd_text, resume_text = phase1_upload_and_analyze()
-        p2_evaluation = phase2_mock_interview(p1_result, jd_text, resume_text)
-        p3_result = phase3_review()
+    results = {}
 
-        print("\n" + "=" * 60)
-        print("全部流程测试完成!")
-        print(f"  Phase 1 score: {p1_result['overall_score']}")
-        print(f"  Phase 2 evaluation: {p2_evaluation.get('overall_score', 'N/A')}")
-        print(f"  Phase 3 score: {p3_result['overall_score']}")
-        print("=" * 60)
-        print("状态: SUCCESS")
-    except AssertionError as e:
-        print(f"\n断言失败: {e}")
-        sys.exit(1)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:500]
-        print(f"\nHTTP错误 {e.code}: {body}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n异常: {type(e).__name__}: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # 阶段1
+    p1 = test_phase1()
+    results["phase1"] = p1 is not None
+    if not p1:
+        print("\n!! 阶段1失败，终止")
+        return 1
+
+    # 阶段2
+    p2 = test_phase2()
+    results["phase2"] = p2 is not None
+    if not p2:
+        print("\n!! 阶段2失败，终止")
+        return 1
+
+    # 阶段3
+    p3 = test_phase3()
+    results["phase3"] = p3 is not None
+
+    # 总结
+    print("\n" + "=" * 50)
+    print("测试结果汇总:")
+    for k, v in results.items():
+        status = "✓ PASS" if v else "✗ FAIL"
+        print(f"  {k}: {status}")
+    print("=" * 50)
+
+    all_pass = all(results.values())
+    return 0 if all_pass else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

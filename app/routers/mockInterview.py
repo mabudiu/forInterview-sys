@@ -35,18 +35,53 @@ class NextReq(BaseModel):
 
 
 # ── PROMPTS ────────────────────────────────────────────
-SYSTEM_INTERVIEW = """你是一位资深技术面试官，正在对候选人一对一模拟面试。
+SYSTEM_INTERVIEW = """你是一位资深技术面试官，正在对候选人进行一对一模拟面试。
 
 原则：
 - 每次只问一个问题，语气自然专业，像真实面试官一样
-- 问题必须从【职位JD】和【候选人简历】中提取具体内容来提问
+- 问题必须从【职位名称】【职位JD】和【候选人简历】中提取具体内容来提问
+- 问题要多样化，覆盖：技术深度题、项目细节题、场景设计题、开放讨论题
 - 禁止问与JD/简历无关的宽泛问题
 - 候选人回答后：先判断是否需要追问，如果需要，必须基于其回答中的具体内容追问（指出哪里不清晰/不完整），不要换新话题
 - 如果回答已充分，再问下一个问题
 - 不列出选项，不暴露评分标准"""
 
+
+def _question_type_picker(history: list, jd_text: str) -> str:
+    """根据已问问题，选择下一题类型，确保多样性"""
+    asked_categories = set()
+    for h in history:
+        q = (h.get("q") or "").lower()
+        if any(k in q for k in ["项目", "经历", "做过"]):
+            asked_categories.add("project")
+        elif any(k in q for k in ["设计", "架构", "方案"]):
+            asked_categories.add("scenario")
+        elif any(k in q for k in ["原理", "为什么", "如何理解"]):
+            asked_categories.add("principle")
+        elif any(k in q for k in ["场景", "假如", "如果", "你会"]):
+            asked_categories.add("behavioral")
+
+    remaining = []
+    if "project" not in asked_categories:
+        remaining.append("项目细节追问")
+    if "scenario" not in asked_categories:
+        remaining.append("场景设计题")
+    if "principle" not in asked_categories:
+        remaining.append("技术原理/深度理解题")
+    if "behavioral" not in asked_categories:
+        remaining.append("行为/开放讨论题")
+
+    # 轮流或随机选一个未问过的类型
+    if remaining:
+        import random
+        return random.choice(remaining)
+    return random.choice(["项目细节追问", "场景设计题", "技术原理/深度理解题", "行为/开放讨论题"])
+
+
 def build_questions_prompt(jd_text: str, resume_text: str, job_title: str) -> str:
-    return f"""## 职位JD（必从中提取具体要求来提问）
+    return f"""## 职位名称：{job_title}
+
+## 职位JD（必从中提取具体要求来提问）
 {jd_text}
 
 ## 候选人简历（必从中提取具体项目/技术来提问）
@@ -55,16 +90,17 @@ def build_questions_prompt(jd_text: str, resume_text: str, job_title: str) -> st
 ## 任务
 请从JD和简历中各选一个具体切入点，提出第一个面试问题。
 要求：
-1. 开头可以请候选人自我介绍或简介项目经历
+1. 开头请候选人自我介绍或简介项目经历（开放式开场）
 2. 问题要具体：比如"你简历中提到的XX项目，用了什么技术方案解决YY问题？"
 3. 不要问"你了解DDD吗"这种脱离简历的宽泛问题
 
 直接输出问题，不要加前缀说明。"""
 
+
 def build_followup_prompt(history: List[dict], jd_text: str, resume_text: str) -> str:
     """追问/判断是否进入下一题的 prompt"""
     n = len(history)
-    prev = f"\n".join([f"第{i+1}轮\n问: {h.get('q') or h.get('question','')}\n答: {h.get('a') or h.get('answer','')}" for i, h in enumerate(history)])
+    prev = "\n".join([f"第{i+1}轮\n问: {h.get('q') or h.get('question','')}\n答: {h.get('a') or h.get('answer','')}" for i, h in enumerate(history)])
     return f"""## 职位JD（参考）
 {jd_text}
 
@@ -88,8 +124,10 @@ def build_followup_prompt(history: List[dict], jd_text: str, resume_text: str) -
 - 追问：以"追问："开头
 - 下一题：直接输出问题，不要加说明"""
 
+
 def build_next_question_prompt(history: List[dict], jd_text: str, resume_text: str) -> str:
     prev = "\n".join([f"第{i+1}轮\n问: {h.get('q') or h.get('question','')}\n答: {h.get('a') or h.get('answer','')}" for i, h in enumerate(history)])
+    qtype = _question_type_picker(history, jd_text)
     return f"""## 职位JD
 {jd_text}
 
@@ -99,8 +137,23 @@ def build_next_question_prompt(history: List[dict], jd_text: str, resume_text: s
 ## 已问过的问题
 {prev}
 
-## 任务
-从JD和简历中选一个尚未被覆盖的内容，提出下一个问题。问题要具体，与候选人背景紧密相关。口语化，直接提问。"""
+## 已覆盖的类别
+{', '.join(set(
+    ("项目细节" if any(k in (h.get('q') or '').lower() for k in ["项目","做过","负责"]) else
+     "场景设计" if any(k in (h.get('q') or '').lower() for k in ["设计","方案","如果","场景"]) else
+     "技术原理" if any(k in (h.get('q') or '').lower() for k in ["原理","为什么","如何理解","机制"]) else
+     "行为开放") for h in history
+)) or "（首轮）"}
+
+## 下一题类型要求：{qtype}
+
+任务：从JD和简历中选一个尚未被覆盖的内容，按类型要求提出问题。
+- 项目细节题：基于简历中的具体项目，追问技术方案、难点、结果数字
+- 场景设计题：给出与JD职位相关的真实场景（如"日活10万的消息系统"），让候选人设计
+- 技术原理题：考察对JD要求技术的深层理解（"MySQL为什么选用xx索引？"）
+- 行为开放题：考察沟通/团队/职业规划（"你为什么想离职？"）
+
+问题要具体，与候选人背景紧密相关。口语化，直接提问。"""
 
 def build_evaluation_prompt(history: List[dict], jd_text: str, resume_text: str) -> str:
     prev = "\n".join([f"第{i+1}轮\n问: {h.get('q') or h.get('question','')}\n答: {h.get('a') or h.get('answer','')}" for i, h in enumerate(history)])
@@ -287,8 +340,8 @@ async def next_question(req: NextReq):
         if not job_title or job_title == "未知职位":
             job_title = inner.get("job_title") or inner.get("position") or "未知职位"
 
-    # 面试结束判断（10轮或前端请求结束）
-    if len(history) >= 10:
+    # 面试结束判断（16轮或前端请求结束）
+    if len(history) >= 16:
         # 生成系统性评价
         eval_prompt = build_evaluation_prompt(history, jd_text, resume_text)
         eval_messages = [
