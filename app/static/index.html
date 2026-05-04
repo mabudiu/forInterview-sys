@@ -174,12 +174,6 @@
             <input type="file" id="resumeFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleFile(this, 'resume')">
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <button class="btn-ghost" onclick="showResumeHistory()" id="resumeHistoryBtn" style="font-size:12px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            选择历史简历
-          </button>
-        </div>
         <div class="or-divider">或直接粘贴文本内容</div>
 
         <div class="input-group">
@@ -265,18 +259,7 @@
   <footer>Powered by MiniMax · Dolphin AI · Interview System</footer>
 </div>
 
-<!-- 历史简历选择浮层 -->
-<div id="resumeHistoryPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;color:var(--gray-900);">选择历史简历</div>
-      <button onclick="closeResumeHistory()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--gray-500);">&times;</button>
-    </div>
-    <div id="resumeHistoryList"></div>
-  </div>
-</div>
-
-<!-- LOADING -->
+<!-- 简历上传说明 -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text">海豚正在分析中…</div>
@@ -503,56 +486,6 @@ ${(analysisResult.questions_to_prepare || []).map((q, i) => `Q${i+1}：${q.quest
   function showLoading(show) {
     document.getElementById('loadingOverlay').classList.toggle('active', show);
     document.getElementById('analyzeBtn').disabled = show;
-  }
-
-  async function showResumeHistory() {
-    const panel = document.getElementById('resumeHistoryPanel');
-    const list = document.getElementById('resumeHistoryList');
-    panel.style.display = 'flex';
-    list.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px;font-size:13px;">加载中…</div>';
-    try {
-      const res = await fetch('/api/preparation/saved-resumes');
-      const resumes = await res.json();
-      if (!resumes.length) {
-        list.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px;font-size:13px;">暂无历史简历<br><span style="font-size:11px;">上传并分析后会保存到这里</span></div>';
-        return;
-      }
-      list.innerHTML = resumes.map(r => `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(167,139,250,0.2);margin-bottom:8px;background:rgba(250,245,255,0.4);">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:var(--gray-900);margin-bottom:2px;">${escHtml(r.filename)}</div>
-            <div style="font-size:11px;color:var(--gray-500);">${r.saved_at} · ${r.char_count}字</div>
-          </div>
-          <button onclick="selectSavedResume('${r.id}')" style="padding:6px 14px;background:linear-gradient(135deg,var(--purple-600),var(--purple-500));color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">使用</button>
-          <button onclick="deleteSavedResume('${r.id}')" style="padding:6px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;cursor:pointer;">✕</button>
-        </div>`).join('');
-    } catch(e) {
-      list.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px;">加载失败</div>';
-    }
-  }
-
-  async function selectSavedResume(id) {
-    try {
-      const res = await fetch('/api/preparation/saved-resumes/' + id);
-      const r = await res.json();
-      document.getElementById('resumeText').value = r.text;
-      uploadedTexts.resume = r.text;
-      document.getElementById('resumePreview').textContent = '📄 ' + r.filename + ' ✓ 已加载 ' + r.text.length + ' 字';
-      document.getElementById('resumeBox').classList.add('has-file');
-      closeResumeHistory();
-    } catch(e) { alert('加载简历失败'); }
-  }
-
-  async function deleteSavedResume(id) {
-    if (!confirm('确定删除该简历？')) return;
-    try {
-      await fetch('/api/preparation/saved-resumes/' + id, { method: 'DELETE' });
-      showResumeHistory();
-    } catch(e) { alert('删除失败'); }
-  }
-
-  function closeResumeHistory() {
-    document.getElementById('resumeHistoryPanel').style.display = 'none';
   }
 
   function escHtml(s) {
