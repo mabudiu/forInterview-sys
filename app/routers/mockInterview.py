@@ -1,4 +1,5 @@
 """模拟面试路由"""
+import asyncio
 import uuid
 import json
 import re
@@ -27,7 +28,7 @@ class AnswerReq(BaseModel):
 
 class NextReq(BaseModel):
     """前端统一调用格式"""
-    analysis: Optional[dict] = None  # Phase1 分析结果
+    analysis: Optional[dict] = None  # Phase1 分析结果 (index.html发来的是整个interviewCtx，含jd_text/resume_text在顶层)
     history: Optional[list] = None    # [{q: str, a: str}] — 前端已append，透传给LLM
     last_question: Optional[str] = None
     last_answer: Optional[str] = None
@@ -178,7 +179,7 @@ async def start_interview(req: StartReq):
         {"role": "system", "content": SYSTEM_INTERVIEW},
         {"role": "user", "content": q_prompt},
     ]
-    question = llm.chat(messages, temperature=0.7, max_tokens=2048)
+    question = await asyncio.to_thread(llm.chat, messages, temperature=0.7, max_tokens=2048)
 
     sessions[session_id] = {
         "messages": messages + [{"role": "assistant", "content": question}],
@@ -213,7 +214,7 @@ async def submit_answer(req: AnswerReq):
     followup_messages = session["messages"] + [
         {"role": "user", "content": "请判断：是对刚才的回答追问，还是已经回答充分需要进入下一题？直接输出追问内容，或只说\"进入下一题\"。"}
     ]
-    raw = llm.chat(followup_messages, temperature=0.5, max_tokens=1024)
+    raw = await asyncio.to_thread(llm.chat, followup_messages, temperature=0.5, max_tokens=1024)
 
     # 如果回复含"下一题"之类的词，认为追问结束，进入下一题
     next_markers = ["下一题", "下一个问题", "换个话题", "进入下一", "下一轮", "next"]
@@ -230,9 +231,9 @@ async def submit_answer(req: AnswerReq):
         }
 
     # 进入下一题
-    next_prompt = build_next_question_prompt(session["history"], session["job_title"])
+    next_prompt = build_next_question_prompt(session["history"], session["jd_text"], session["resume_text"])
     next_messages = session["messages"] + [{"role": "user", "content": next_prompt}]
-    next_question = llm.chat(next_messages, temperature=0.7, max_tokens=2048)
+    next_question = await asyncio.to_thread(llm.chat, next_messages, temperature=0.7, max_tokens=2048)
 
     session["messages"].append({"role": "assistant", "content": next_question})
     session["question_count"] += 1
@@ -271,14 +272,20 @@ async def next_question(req: NextReq):
     analysis = req.analysis or {}
 
     # 从 interviewCtx (analysis) 中提取 JD / resume 原文
-    # index.html 存入结构：{analysis: {...}, jd_text: "...", resume_text: "..."}
-    jd_text = analysis.get("jd_text", "") or analysis.get("jd", "") or ""
-    resume_text = analysis.get("resume_text", "") or analysis.get("resume", "") or ""
-    job_title = analysis.get("job_title") or analysis.get("position") or "未知职位"
-    # 也支持嵌套结构：{analysis: {jd_text, resume_text, ...}}
-    if not jd_text and isinstance(analysis.get("analysis"), dict):
-        jd_text = analysis["analysis"].get("jd_text", "") or analysis["analysis"].get("jd", "")
-        resume_text = analysis["analysis"].get("resume_text", "") or analysis["analysis"].get("resume", "")
+    # index.html 存入 interviewCtx = {analysis: {...}, jd_text: "...", resume_text: "..."}
+    # 前端首次调用时 analysis 就是 interviewCtx 本身（不是嵌套结构）
+    ctx = analysis or {}
+    # 顶层优先（interviewCtx 结构）
+    jd_text = ctx.get("jd_text", "") or ctx.get("jd", "") or ""
+    resume_text = ctx.get("resume_text", "") or ctx.get("resume", "") or ""
+    job_title = ctx.get("job_title") or ctx.get("position") or "未知职位"
+    # 兼容嵌套 analysis 结构
+    if not jd_text and isinstance(ctx.get("analysis"), dict):
+        inner = ctx["analysis"]
+        jd_text = inner.get("jd_text", "") or inner.get("jd", "")
+        resume_text = inner.get("resume_text", "") or inner.get("resume", "")
+        if not job_title or job_title == "未知职位":
+            job_title = inner.get("job_title") or inner.get("position") or "未知职位"
 
     # 面试结束判断（10轮或前端请求结束）
     if len(history) >= 10:
@@ -289,7 +296,7 @@ async def next_question(req: NextReq):
             {"role": "user", "content": eval_prompt},
         ]
         try:
-            raw_eval = llm.chat(eval_messages, temperature=0.3, max_tokens=2048)
+            raw_eval = await asyncio.to_thread(llm.chat, eval_messages, temperature=0.3, max_tokens=2048)
             eval_text = _robust_json(raw_eval)
             try:
                 evaluation = json.loads(eval_text)
@@ -311,7 +318,7 @@ async def next_question(req: NextReq):
             {"role": "system", "content": SYSTEM_INTERVIEW},
             {"role": "user", "content": prompt},
         ]
-        question_text = _clean_question(llm.chat(messages, temperature=0.7, max_tokens=2048))
+        question_text = _clean_question(await asyncio.to_thread(llm.chat, messages, temperature=0.7, max_tokens=2048))
         return {
             "done": False,
             "question": {
@@ -329,7 +336,7 @@ async def next_question(req: NextReq):
         {"role": "system", "content": SYSTEM_INTERVIEW},
         {"role": "user", "content": followup_prompt},
     ]
-    decision = llm.chat(messages, temperature=0.5, max_tokens=1024)
+    decision = await asyncio.to_thread(llm.chat, messages, temperature=0.5, max_tokens=1024)
 
     # 追问判断：输出以"追问："开头，或内容明显是追问而非完整问题
     is_followup = decision.startswith("追问：") or (
@@ -360,7 +367,7 @@ async def next_question(req: NextReq):
             {"role": "system", "content": SYSTEM_INTERVIEW},
             {"role": "user", "content": next_prompt},
         ]
-        question_text = llm.chat(next_messages, temperature=0.7, max_tokens=2048)
+        question_text = await asyncio.to_thread(llm.chat, next_messages, temperature=0.7, max_tokens=2048)
         return {
             "done": False,
             "question": {

@@ -66,6 +66,8 @@
     .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
     .btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; color: var(--purple-600); border: 1px solid rgba(167,139,250,0.35); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; }
     .btn-ghost:hover { background: var(--purple-50); border-color: var(--purple-300); }
+    .btn-download { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: rgba(255,255,255,0.9); color: var(--purple-700); border: 1px solid rgba(167,139,250,0.4); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .btn-download:hover { background: var(--purple-50); border-color: var(--purple-400); transform: translateY(-1px); }
 
     /* RESULT */
     #result { display: none; }
@@ -172,6 +174,12 @@
             <input type="file" id="resumeFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleFile(this, 'resume')">
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <button class="btn-ghost" onclick="showResumeHistory()" id="resumeHistoryBtn" style="font-size:12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            选择历史简历
+          </button>
+        </div>
         <div class="or-divider">或直接粘贴文本内容</div>
 
         <div class="input-group">
@@ -215,10 +223,8 @@
 
       <div class="tabs">
         <button class="tab active" onclick="switchTab(this, 'tab-match')">匹配分析</button>
-        <button class="tab" onclick="switchTab(this, 'tab-jdreq')">JD要求</button>
         <button class="tab" onclick="switchTab(this, 'tab-knowledge')">知识准备</button>
         <button class="tab" onclick="switchTab(this, 'tab-study')">学习大纲</button>
-        <button class="tab" onclick="switchTab(this, 'tab-qtp')">面试问题</button>
       </div>
 
       <div id="tab-match" class="tab-content active">
@@ -234,11 +240,6 @@
         </div>
       </div>
 
-      <div id="tab-jdreq" class="tab-content">
-        <div class="result-section-title" style="margin-bottom:12px;"><span class="dot" style="background:var(--purple-400)"></span>JD要求逐一分析</div>
-        <div id="jdReqItems"></div>
-      </div>
-
       <div id="tab-knowledge" class="tab-content">
         <div id="knowledgeItems"></div>
       </div>
@@ -247,20 +248,14 @@
         <div id="studyPlanItems"></div>
       </div>
 
-      <div id="tab-qtp" class="tab-content">
-        <div id="qtpItems"></div>
-      </div>
-
-      <div id="tab-raw" class="tab-content">
-        <div class="card" style="background:rgba(250,245,255,0.4);">
-          <pre id="rawOutput" style="font-size:12px; color:var(--gray-700); white-space:pre-wrap; line-height:1.8; font-family:inherit;"></pre>
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:32px;">
+      <div style="text-align:center; margin-top:32px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
         <button class="btn-primary" onclick="enterMockInterview()">
           进入模拟面试
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </button>
+        <button class="btn-download" onclick="downloadPhase1()" id="downloadPhase1Btn" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          导出分析报告
         </button>
       </div>
     </div>
@@ -268,6 +263,17 @@
   </main>
 
   <footer>Powered by MiniMax · Dolphin AI · Interview System</footer>
+</div>
+
+<!-- 历史简历选择浮层 -->
+<div id="resumeHistoryPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;color:var(--gray-900);">选择历史简历</div>
+      <button onclick="closeResumeHistory()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--gray-500);">&times;</button>
+    </div>
+    <div id="resumeHistoryList"></div>
+  </div>
 </div>
 
 <!-- LOADING -->
@@ -279,26 +285,69 @@
 <script>
   let analysisResult = null;
 
+  // 存储上传文件解析后的文本
+  const uploadedTexts = { jd: '', resume: '' };
+  // 跟踪当前正在上传的文件数量
+  let pendingUploads = 0;
+
   function handleFile(input, type) {
     const file = input.files[0];
     if (!file) return;
     const box = document.getElementById(type + 'Box');
     const preview = document.getElementById(type + 'Preview');
-    preview.textContent = '📄 ' + file.name;
+    preview.textContent = '📄 ' + file.name + ' (上传中…)';
     box.classList.add('has-file');
+
+    pendingUploads++;
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/api/preparation/upload', { method: 'POST', body: formData })
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.text();
+          throw new Error('上传失败 ' + r.status + ': ' + err);
+        }
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('json')) {
+          const txt = await r.text();
+          throw new Error('非JSON响应: ' + txt.slice(0, 100));
+        }
+        return r.json();
+      })
+      .then(data => {
+        const text = data.text || '';
+        uploadedTexts[type] = text;
+        document.getElementById(type + 'Text').value = text;
+        preview.textContent = '📄 ' + file.name + ' ✓ 已解析 ' + text.length + ' 字';
+      })
+      .catch(e => {
+        console.error('[handleFile] 错误:', e);
+        preview.textContent = '📄 ' + file.name + ' ✗ ' + (e.message || '解析失败');
+      })
+      .finally(() => {
+        pendingUploads--;
+      });
   }
 
   async function analyze() {
-    const jd = document.getElementById('jdText').value.trim();
-    const resume = document.getElementById('resumeText').value.trim();
-    if (!jd && !resume) { alert('请上传文件或粘贴文本内容'); return; }
+    // 如果有文件正在上传，等待完成
+    if (pendingUploads > 0) {
+      document.querySelector('.loading-text').textContent = '正在解析文件…';
+    }
+    while (pendingUploads > 0) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    const jd = (document.getElementById('jdText').value.trim() || uploadedTexts.jd);
+    const resume = (document.getElementById('resumeText').value.trim() || uploadedTexts.resume);
+    if (!jd && !resume) { alert('请上传文件或粘贴简历内容'); return; }
 
     showLoading(true);
     try {
       const res = await fetch('/api/preparation/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd_text: jd, resume_text: resume })
+        body: JSON.stringify({ jd_text: jd, resume_text: resume, auto_save_resume: true })
       });
       const data = await res.json();
       analysisResult = data;
@@ -306,6 +355,7 @@
       document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
       renderResult(data);
     } catch(e) {
+      console.error('分析失败:', e);
       alert('分析失败: ' + e.message);
     } finally {
       showLoading(false);
@@ -313,39 +363,15 @@
   }
 
   function renderResult(data) {
+    // Show download button
+    const dlBtn = document.getElementById('downloadPhase1Btn');
+    if (dlBtn) dlBtn.style.display = 'inline-flex';
+
     // Score ring
     const score = data.overall_score || 0;
     const circumference = 2 * Math.PI * 65;
     document.getElementById('scoreFg').style.strokeDashoffset = circumference - (score / 100) * circumference;
     document.getElementById('scoreNum').textContent = score;
-
-    // Score breakdown
-    const bd = data.score_breakdown || {};
-    const dimGrid = document.getElementById('dimGrid') || null;
-    if (dimGrid) {
-      const items = Object.entries(bd).map(([name, val]) => `
-        <div class="dim-item">
-          <div class="dim-name">${escHtml(name)}</div>
-          <div class="dim-bar-wrap"><div class="dim-bar" style="width:${val}%"></div></div>
-          <div class="dim-score">${val}</div>
-        </div>`).join('');
-      dimGrid.innerHTML = items;
-    }
-
-    // JD Requirements Analysis
-    const jdReqs = data.jd_requirements_analysis || [];
-    const jdReqEl = document.getElementById('jdReqItems') || null;
-    if (jdReqEl) {
-      jdReqEl.innerHTML = jdReqs.length
-        ? jdReqs.map(r => `
-          <div class="match-item ${r.match_degree === '完全匹配' ? 'match' : r.match_degree === '未涉及' ? 'gap' : ''}">
-            <div class="match-item-label">${r.match_degree === '完全匹配' ? '✓ 匹配' : r.match_degree === '未涉及' ? '✗ 缺失' : '△ 部分'}</div>
-            <div class="match-item-title">${escHtml(r.requirement || '')}</div>
-            <div class="match-item-desc">${escHtml(r.resume_evidence || '（简历中无相关证据）')}</div>
-            <div class="match-item-desc" style="color:var(--gray-500);font-size:11px;margin-top:3px;">${escHtml(r.analysis || '')}</div>
-          </div>`).join('')
-        : '';
-    }
 
     // Match / Gap
     const matches = data.matched_items || [];
@@ -399,33 +425,6 @@
           </div>`).join('')
         : '<p style="color:var(--gray-500);font-size:13px;">暂无学习计划数据</p>';
     }
-
-    // Questions to Prepare
-    const qtpEl = document.getElementById('qtpItems') || null;
-    if (qtpEl) {
-      const qs = data.questions_to_prepare || [];
-      qtpEl.innerHTML = qs.length
-        ? qs.map((q, i) => `
-          <div style="margin-bottom:12px;padding:12px;background:rgba(255,255,255,0.8);border-radius:10px;border:1px solid rgba(167,139,250,0.2);">
-            <div style="font-weight:700;font-size:12px;color:var(--purple-700);margin-bottom:5px;">Q${i+1}：${escHtml(q.question || '')}</div>
-            <div style="font-size:11px;color:var(--gray-700);margin-bottom:4px;"><b>框架：</b>${escHtml(q.answer_framework || '')}</div>
-            <div style="font-size:11px;color:var(--gray-700);margin-bottom:4px;"><b>关键点：</b>${escHtml(q.key_points || '')}</div>
-            ${q.common_mistakes ? `<div style="font-size:10px;color:#dc2626;"><b>⚠ 常犯错误：</b>${escHtml(q.common_mistakes)}</div>` : ''}
-          </div>`).join('')
-        : '';
-    }
-
-    // Interview Focus
-    const focusEl = document.getElementById('interviewFocusItems') || null;
-    if (focusEl) {
-      const focus = data.interview_focus || [];
-      focusEl.innerHTML = focus.length
-        ? focus.map((f, i) => `<li style="margin-bottom:6px;">${escHtml(f)}</li>`).join('')
-        : '';
-    }
-
-    // Raw
-    document.getElementById('rawOutput').textContent = JSON.stringify(data, null, 2);
   }
 
   function switchTab(btn, id) {
@@ -453,12 +452,107 @@
     ['jdBox', 'resumeBox'].forEach(id => { const b = document.getElementById(id); b.classList.remove('has-file'); });
     ['jdPreview', 'resumePreview'].forEach(id => document.getElementById(id).textContent = '');
     document.getElementById('result').style.display = 'none';
+    const dlBtn = document.getElementById('downloadPhase1Btn');
+    if (dlBtn) dlBtn.style.display = 'none';
     analysisResult = null;
+  }
+
+  function downloadPhase1() {
+    if (!analysisResult) return;
+    const jd = document.getElementById('jdText').value.trim();
+    const resume = document.getElementById('resumeText').value.trim();
+    const content = `# Phase 1 · 面试前准备分析报告
+
+## 匹配分析
+综合得分：${analysisResult.overall_score || 0} / 100
+
+### 匹配项
+${(analysisResult.matched_items || []).map(m => `- ✓ ${m.aspect || ''}\n  JD要求：${m.jd_requirement || ''}\n  简历证据：${m.resume_evidence || ''}\n  分析：${m.analysis || ''}`).join('\n\n')}
+
+### 不足项
+${(analysisResult.gap_items || []).map(g => `- △ ${g.aspect || ''}\n  JD要求：${g.jd_requirement || ''}\n  差距：${g.gap_description || g.suggestion || ''}`).join('\n\n')}
+
+## JD要求分析
+${(analysisResult.jd_requirements_analysis || []).map(r => `- 【${r.match_degree === '完全匹配' ? '匹配' : r.match_degree === '未涉及' ? '缺失' : '部分'}] ${r.requirement || ''}\n  简历证据：${r.resume_evidence || '（无）'}\n  分析：${r.analysis || ''}`).join('\n\n')}
+
+## 知识准备建议
+${(analysisResult.knowledge_areas || []).map(k => `### ${k.category || ''} (${k.priority || ''})\n${Array.isArray(k.topics) ? k.topics.map(t => `- ${t}`).join('\n') : k.topics || ''}`).join('\n\n')}
+
+## 学习大纲
+${(analysisResult.detailed_study_plan || []).map(a => `### ${a.area || ''}\n${(a.sub_areas || []).map(s => `- ${s.name || ''} (${s.importance || ''}, 预计${s.estimated_study_time || ''})\n  关键点：${Array.isArray(s.key_points) ? s.key_points.join('、') : ''}\n  资源：${s.study_resources || ''}`).join('\n')}`).join('\n\n')}
+
+## 面试问题准备
+${(analysisResult.questions_to_prepare || []).map((q, i) => `Q${i+1}：${q.question || ''}\n框架：${q.answer_framework || ''}\n关键点：${q.key_points || ''}${q.common_mistakes ? '\n⚠ 常犯错误：' + q.common_mistakes : ''}`).join('\n\n')}
+
+---
+原始输入（JD）：${jd || '（无）'}
+原始输入（简历）：${resume || '（无）'}
+`;
+    downloadText(content, 'phase1-面试前准备报告.md');
+  }
+
+  function downloadText(text, filename) {
+    const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
   function showLoading(show) {
     document.getElementById('loadingOverlay').classList.toggle('active', show);
     document.getElementById('analyzeBtn').disabled = show;
+  }
+
+  async function showResumeHistory() {
+    const panel = document.getElementById('resumeHistoryPanel');
+    const list = document.getElementById('resumeHistoryList');
+    panel.style.display = 'flex';
+    list.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px;font-size:13px;">加载中…</div>';
+    try {
+      const res = await fetch('/api/preparation/saved-resumes');
+      const resumes = await res.json();
+      if (!resumes.length) {
+        list.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:20px;font-size:13px;">暂无历史简历<br><span style="font-size:11px;">上传并分析后会保存到这里</span></div>';
+        return;
+      }
+      list.innerHTML = resumes.map(r => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(167,139,250,0.2);margin-bottom:8px;background:rgba(250,245,255,0.4);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--gray-900);margin-bottom:2px;">${escHtml(r.filename)}</div>
+            <div style="font-size:11px;color:var(--gray-500);">${r.saved_at} · ${r.char_count}字</div>
+          </div>
+          <button onclick="selectSavedResume('${r.id}')" style="padding:6px 14px;background:linear-gradient(135deg,var(--purple-600),var(--purple-500));color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">使用</button>
+          <button onclick="deleteSavedResume('${r.id}')" style="padding:6px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;cursor:pointer;">✕</button>
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = '<div style="text-align:center;color:#dc2626;padding:20px;font-size:13px;">加载失败</div>';
+    }
+  }
+
+  async function selectSavedResume(id) {
+    try {
+      const res = await fetch('/api/preparation/saved-resumes/' + id);
+      const r = await res.json();
+      document.getElementById('resumeText').value = r.text;
+      uploadedTexts.resume = r.text;
+      document.getElementById('resumePreview').textContent = '📄 ' + r.filename + ' ✓ 已加载 ' + r.text.length + ' 字';
+      document.getElementById('resumeBox').classList.add('has-file');
+      closeResumeHistory();
+    } catch(e) { alert('加载简历失败'); }
+  }
+
+  async function deleteSavedResume(id) {
+    if (!confirm('确定删除该简历？')) return;
+    try {
+      await fetch('/api/preparation/saved-resumes/' + id, { method: 'DELETE' });
+      showResumeHistory();
+    } catch(e) { alert('删除失败'); }
+  }
+
+  function closeResumeHistory() {
+    document.getElementById('resumeHistoryPanel').style.display = 'none';
   }
 
   function escHtml(s) {

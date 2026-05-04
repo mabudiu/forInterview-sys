@@ -1,4 +1,5 @@
 """面试复盘路由 — 支持自由格式文本输入"""
+import asyncio
 import json
 import re
 import logging
@@ -131,7 +132,7 @@ async def review_interview(req: ReviewRequest):
     ]
 
     try:
-        raw = llm.chat(messages, temperature=0.3, max_tokens=16384)
+        raw = await asyncio.to_thread(llm.chat, messages, temperature=0.3, max_tokens=16384)
     except Exception as e:
         logger.error(f"LLM调用失败: {e}")
         return {
@@ -156,7 +157,7 @@ async def review_interview(req: ReviewRequest):
             {"role": "user", "content": "上一轮输出无法解析为JSON，请只输出一个JSON对象，不要任何解释或markdown代码块。"}
         ]
         try:
-            raw2 = llm.chat(retry_messages, temperature=0.1, max_tokens=8192)
+            raw2 = await asyncio.to_thread(llm.chat, retry_messages, temperature=0.1, max_tokens=8192)
             text2 = _robust_json(raw2)
             result = json.loads(text2)
             return result
