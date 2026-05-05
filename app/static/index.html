@@ -116,6 +116,37 @@
     .loading-text { font-size: 14px; color: var(--purple-600); font-weight: 500; }
 
     footer { text-align: center; padding: 28px 48px; font-size: 12px; color: var(--gray-500); border-top: 1px solid rgba(167,139,250,0.1); background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      body { font-size: 13px; }
+      header { padding: 16px 20px; }
+      .logo-icon { width: 30px; height: 30px; }
+      .logo-text { font-size: 16px; }
+      .tagline { font-size: 10px; }
+      .header-right { font-size: 11px; }
+      main { padding: 20px 16px 48px; }
+      .phase-section { margin-bottom: 28px; }
+      .phase-header { margin-bottom: 14px; }
+      .phase-title { font-size: 17px; }
+      .phase-desc { font-size: 11px; }
+      .card { padding: 22px 18px; }
+      .upload-grid { grid-template-columns: 1fr; gap: 14px; }
+      .upload-box { padding: 24px 16px; }
+      textarea { font-size: 16px; min-height: 120px; }
+      .btn-primary { width: 100%; justify-content: center; min-height: 48px; font-size: 14px; padding: 12px 20px; }
+      .btn-ghost { padding: 10px 16px; font-size: 13px; }
+      .btn-download { padding: 10px 16px; font-size: 13px; }
+      .result-grid { grid-template-columns: 1fr; gap: 14px; }
+      .result-header h2 { font-size: 20px; }
+      .score-ring { width: 130px; height: 130px; }
+      .score-ring svg { width: 130px; height: 130px; }
+      .score-ring .fg { stroke-dasharray: 340; stroke-dashoffset: 340; }
+      .score-num { font-size: 36px; }
+      .tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+      .tab { padding: 7px 14px; font-size: 12px; white-space: nowrap; }
+      footer { padding: 20px 16px; }
+    }
   </style>
 </head>
 <body>

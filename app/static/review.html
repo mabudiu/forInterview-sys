@@ -92,6 +92,32 @@
     .loading-text { font-size: 13px; color: var(--purple-600); font-weight: 500; }
 
     footer { text-align: center; padding: 22px 48px; font-size: 11px; color: var(--gray-500); border-top: 1px solid rgba(167,139,250,0.1); background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      body { font-size: 13px; }
+      header { padding: 14px 16px; }
+      .logo-icon { width: 28px; height: 28px; }
+      .logo-text { font-size: 15px; }
+      .tagline { font-size: 10px; }
+      .phase-badge { font-size: 11px; padding: 3px 10px; }
+      main { padding: 20px 16px 48px; }
+      .section-title { font-size: 18px; }
+      .section-desc { font-size: 12px; }
+      .card { padding: 20px 16px; margin-bottom: 18px; }
+      .score-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+      .score-val { font-size: 28px; }
+      .score-item { padding: 14px 10px; }
+      .dim-grid { grid-template-columns: 1fr; }
+      textarea { font-size: 16px; min-height: 150px; }
+      .btn-primary { width: 100%; justify-content: center; min-height: 48px; font-size: 14px; padding: 12px 20px; }
+      .btn-ghost { padding: 10px 16px; font-size: 13px; }
+      .btn-download { padding: 10px 16px; font-size: 13px; }
+      .tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+      .tab { padding: 7px 14px; font-size: 12px; white-space: nowrap; }
+      .qa-item { padding: 14px 16px; }
+      footer { padding: 16px; }
+    }
   </style>
 </head>
 <body>

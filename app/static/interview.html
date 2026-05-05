@@ -92,6 +92,32 @@
     .loading-text { font-size: 13px; color: var(--purple-600); font-weight: 500; }
 
     footer { text-align: center; padding: 22px 48px; font-size: 11px; color: var(--gray-500); border-top: 1px solid rgba(167,139,250,0.1); background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      body { font-size: 13px; }
+      header { padding: 14px 16px; }
+      .logo-icon { width: 28px; height: 28px; }
+      .logo-text { font-size: 15px; }
+      .tagline { font-size: 10px; }
+      .phase-badge { font-size: 11px; padding: 3px 10px; }
+      main { padding: 20px 16px 48px; }
+      .progress-bar-wrap { margin-bottom: 24px; }
+      .question-card { padding: 22px 18px; }
+      .q-text { font-size: 14px; }
+      .q-icon { width: 30px; height: 30px; }
+      textarea { font-size: 16px; min-height: 120px; }
+      .btn-row { flex-direction: column; gap: 8px; }
+      .btn-primary, .btn-ghost, .btn-download { width: 100%; justify-content: center; min-height: 48px; }
+      .btn-primary { font-size: 14px; padding: 12px 20px; }
+      .btn-ghost { font-size: 13px; padding: 10px 16px; }
+      .btn-download { font-size: 13px; padding: 10px 16px; }
+      .waiting-card { padding: 36px 20px; }
+      .waiting-dolphin { font-size: 48px; }
+      .waiting-title { font-size: 16px; }
+      .history-section { margin-top: 28px; }
+      footer { padding: 16px; }
+    }
   </style>
 </head>
 <body>
